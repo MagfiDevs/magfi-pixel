@@ -1,5 +1,5 @@
 homepage: "https://magfiads.com"
 documentation: "https://github.com/MagfiDevs/magfi-pixel/wiki"
 versions:
-  - sha: 50e6986b76b0e79a6108fc8d0ca328375dd5e84a
+  - sha: 1e01ed63f4a7d0b854c933cc339b3b502db58a88
     changeNotes: "Initial release - page view, purchase, lead, sign up, add to cart, and custom event tracking with Consent Mode v2 support."
