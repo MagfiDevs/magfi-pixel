@@ -1,5 +1,7 @@
 homepage: "https://magfiads.com"
-documentation: "https://github.com/MagfiDevs/magfi-pixel/wiki"
+documentation: "https://github.com/MagfiDevs/magfi-pixel#readme"
 versions:
   - sha: 1e01ed63f4a7d0b854c933cc339b3b502db58a88
-    changeNotes: "Initial release - page view, purchase, lead, sign up, add to cart, and custom event tracking with Consent Mode v2 support."
+    changeNotes: "Initial release. Tracks Page View, Purchase, Lead, Sign Up, Add to Cart, and Custom events with Consent Mode v2 support."
+  - sha: cd5d514b28c262b90e87ec2c567a533d828feb6e
+    changeNotes: "Tighten get_cookies permission to four specific cookie names (mgfcid, mgfcid_cid, mgfcid_uid, mgfcid_fcid). Translate template field help text to English. Add CHANGELOG, CONTRIBUTING and SECURITY  documents. No behavioural changes for end users."
