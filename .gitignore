@@ -1,0 +1,53 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# IDE / Editors
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+.history/
+
+# Node / tooling (if linters or local helpers are ever added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Logs
+logs/
+*.log
+
+# Local environment overrides
+.env
+.env.local
+.env.*.local
+
+# Build artefacts (not used by GTM templates, but keep us safe)
+dist/
+build/
+out/
+coverage/
+
+# Claude Code worktrees / scratch
+.claude/

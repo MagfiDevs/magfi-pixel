@@ -38,7 +38,7 @@ ___TEMPLATE_PARAMETERS___
         "type": "NON_EMPTY"
       }
     ],
-    "help": "Your Platform tarafından sağlanan Tracking ID. Panelde site ayarlarından alabilirsiniz."
+    "help": "Your Magfi Tracking ID. You can find it in your Magfi dashboard under Site Settings."
   },
   {
     "type": "SELECT",
@@ -68,14 +68,14 @@ ___TEMPLATE_PARAMETERS___
         "type": "EQUALS"
       }
     ],
-    "help": "Özel event adı (ör: video_play, scroll_depth)"
+    "help": "Custom event name (e.g. video_play, scroll_depth). Only used when Event Type is set to Custom Event."
   },
   {
     "type": "TEXT",
     "name": "eventValue",
     "displayName": "Event Value (optional)",
     "simpleValueType": true,
-    "help": "Opsiyonel: Conversion değeri (ör: satın alma tutarı)"
+    "help": "Optional conversion value (e.g. purchase total). Numeric value, no currency symbol."
   },
   {
     "type": "TEXT",
@@ -83,7 +83,7 @@ ___TEMPLATE_PARAMETERS___
     "displayName": "Currency (optional)",
     "simpleValueType": true,
     "defaultValue": "TRY",
-    "help": "Para birimi kodu (ör: TRY, USD, EUR)"
+    "help": "ISO 4217 currency code (e.g. TRY, USD, EUR)."
   },
   {
     "type": "GROUP",
@@ -97,7 +97,7 @@ ___TEMPLATE_PARAMETERS___
         "displayName": "Cookie Name",
         "simpleValueType": true,
         "defaultValue": "mgfcid",
-        "help": "Session cookie adı. Varsayılanı değiştirmeyin."
+        "help": "Base name used for the Magfi cookies (session, click ID, user ID, first-touch). Keep the default value unless you have a specific reason to change it; permissions allow only the default name."
       },
       {
         "type": "TEXT",
@@ -432,7 +432,19 @@ ___WEB_PERMISSIONS___
           "key": "cookieAccess",
           "value": {
             "type": 1,
-            "string": "any"
+            "string": "specific"
+          }
+        },
+        {
+          "key": "cookieNames",
+          "value": {
+            "type": 2,
+            "listItem": [
+              { "type": 1, "string": "mgfcid" },
+              { "type": 1, "string": "mgfcid_cid" },
+              { "type": 1, "string": "mgfcid_uid" },
+              { "type": 1, "string": "mgfcid_fcid" }
+            ]
           }
         }
       ]
