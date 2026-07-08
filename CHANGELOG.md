@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The tag now fires **only** when a Magfi click ID is present — either freshly in
+  the `mgfclid` URL parameter or persisted in the `mgfcid_cid` cookie from an
+  earlier ad-click landing. Organic visits with no click ID are no longer tracked:
+  no pixel is sent, so no event reaches the backend. Previously the tag fired on
+  every visit (organic included).
+
 ## [1.0.0] - 2026-05-12
 
 ### Added

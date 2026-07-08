@@ -160,8 +160,26 @@ function executeTag() {
     return;
   }
 
-  // --- Click ID from URL ---
-  var clickId = getQueryParameters(clickIdParam) || '';
+  // --- Click ID: fresh from the ad-click URL, or persisted from a prior landing ---
+  var clickIdCookie = cookieName + '_cid';
+  var urlClickId = getQueryParameters(clickIdParam) || '';
+  var clickId = urlClickId;
+  if (!clickId) {
+    // No click ID in URL — fall back to the click ID persisted from an earlier
+    // ad-click landing (subsequent page views within the same journey).
+    var cidCookies = getCookieValues(clickIdCookie);
+    if (cidCookies && cidCookies.length > 0) {
+      clickId = cidCookies[0];
+    }
+  }
+
+  // Only track visits that carry a Magfi click ID (fresh from the URL or persisted
+  // in the cookie from an earlier ad click). Organic visits with no click ID are
+  // NOT tracked — no pixel is sent, so nothing is written to the backend.
+  if (!clickId) {
+    data.gtmOnSuccess();
+    return;
+  }
 
   // --- Session ID (cookie-based) ---
   var sessionId = '';
@@ -170,27 +188,15 @@ function executeTag() {
     sessionId = existingCookies[0];
   }
 
-  // If we have a click ID, always refresh the cookie (new session from ad click)
-  if (clickId) {
-    sessionId = generateSessionId();
-    setTrackingCookie(cookieName, sessionId, cookieDays);
-  } else if (!sessionId) {
-    // No cookie and no click ID - organic visit, still track if tracking ID present
+  // A fresh click ID in the URL starts a new session (new ad click); otherwise
+  // reuse the existing session cookie (minting one only if it is somehow absent).
+  if (urlClickId || !sessionId) {
     sessionId = generateSessionId();
     setTrackingCookie(cookieName, sessionId, cookieDays);
   }
 
-  // --- Also persist click ID in cookie for subsequent page views ---
-  var clickIdCookie = cookieName + '_cid';
-  if (clickId) {
-    setTrackingCookie(clickIdCookie, clickId, cookieDays);
-  } else {
-    // Try to read click ID from cookie (subsequent pages after landing)
-    var cidCookies = getCookieValues(clickIdCookie);
-    if (cidCookies && cidCookies.length > 0) {
-      clickId = cidCookies[0];
-    }
-  }
+  // --- Persist click ID in cookie for subsequent page views ---
+  setTrackingCookie(clickIdCookie, clickId, cookieDays);
 
   // --- Persistent User ID (cross-session tracking) ---
   var userIdCookie = cookieName + '_uid';
@@ -734,3 +740,65 @@ scenarios:
     });
 
     runCode(mockData);
+
+- name: Does not fire pixel for organic visit without a click ID
+  code: |-
+    let pixelSent = false;
+    let successCalled = false;
+    const mockData = {
+      trackingId: 'TRK-12345',
+      eventType: 'page_view',
+      cookieName: 'mgfcid',
+      cookieDays: '30',
+      gtmOnSuccess: () => { successCalled = true; },
+      gtmOnFailure: () => {}
+    };
+
+    mock('isConsentGranted', function() { return true; });
+    mock('setCookie', function() {});
+    mock('getCookieValues', function() { return []; });
+    mock('getQueryParameters', function() { return ''; });
+    mock('getUrl', function() { return 'example.com'; });
+    mock('getReferrerUrl', function() { return ''; });
+    mock('queryPermission', function() { return true; });
+    mock('sendPixel', function() { pixelSent = true; });
+
+    runCode(mockData);
+
+    // No Magfi click ID anywhere → nothing is sent, but the tag still succeeds.
+    assertThat(pixelSent).isFalse();
+    assertThat(successCalled).isTrue();
+
+- name: Fires pixel on later page view using the persisted click ID cookie
+  code: |-
+    const mockData = {
+      trackingId: 'TRK-12345',
+      eventType: 'page_view',
+      cookieName: 'mgfcid',
+      cookieDays: '30',
+      gtmOnSuccess: () => {},
+      gtmOnFailure: () => {}
+    };
+
+    let pixelSent = false;
+    mock('isConsentGranted', function() { return true; });
+    mock('setCookie', function() {});
+    mock('getCookieValues', function(name) {
+      if (name === 'mgfcid_cid') return ['mgf.1.77.88.99.1670000000000.22222222200000'];
+      return [];
+    });
+    mock('getQueryParameters', function() { return ''; });
+    mock('getUrl', function() { return 'example.com'; });
+    mock('getReferrerUrl', function() { return ''; });
+    mock('queryPermission', function() { return true; });
+    mock('sendPixel', function(url, s, f) {
+      pixelSent = true;
+      // No mgfclid in the URL, but the persisted cookie click ID drives tracking.
+      assertThat(url).contains('cid=mgf.1.77.88.99.1670000000000.22222222200000');
+      assertThat(url).contains('community_id=77');
+      s();
+    });
+
+    runCode(mockData);
+
+    assertThat(pixelSent).isTrue();
