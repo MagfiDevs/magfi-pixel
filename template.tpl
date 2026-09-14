@@ -41,6 +41,13 @@ ___TEMPLATE_PARAMETERS___
     "help": "Your Magfi Tracking ID. You can find it in your Magfi dashboard under Site Settings."
   },
   {
+    "type": "TEXT",
+    "name": "testSession",
+    "displayName": "Test Session (Preview only, optional)",
+    "simpleValueType": true,
+    "help": "Conversion Manager signed session token. Set ONLY in local GTM Preview on every Magfi tag being tested; never publish a token. Clear explicitly to resume normal tracking, even after expiry. Update older templates before testing."
+  },
+  {
     "type": "SELECT",
     "name": "eventType",
     "displayName": "Event Type",
@@ -160,8 +167,27 @@ function executeTag() {
     return;
   }
 
+  // A configured marker never falls back to production, including after expiry.
+  // Only transport safety is checked here; the server validates HMAC and expiry.
+  var testSession = data.testSession;
+  if (testSession !== undefined && testSession !== null && testSession !== '') {
+    sendMinimalEvent(trackingId, eventType, endpoint, safeTestSession(testSession));
+    return;
+  }
+
   // --- Click ID from URL ---
   var clickId = getQueryParameters(clickIdParam) || '';
+  var urlClickId = clickId;
+  var clickIdCookie = cookieName + '_cid';
+  if (!clickId) {
+    var cidCookies = getCookieValues(clickIdCookie);
+    if (cidCookies && cidCookies.length > 0) clickId = cidCookies[0];
+  }
+  if (!clickId) {
+    // Read only the attribution cookie to establish absence of a match.
+    sendMinimalEvent(trackingId, eventType, endpoint, '');
+    return;
+  }
 
   // --- Session ID (cookie-based) ---
   var sessionId = '';
@@ -171,25 +197,18 @@ function executeTag() {
   }
 
   // If we have a click ID, always refresh the cookie (new session from ad click)
-  if (clickId) {
+  if (urlClickId) {
     sessionId = generateSessionId();
     setTrackingCookie(cookieName, sessionId, cookieDays);
   } else if (!sessionId) {
-    // No cookie and no click ID - organic visit, still track if tracking ID present
+    // Matched returning visitor without a session cookie.
     sessionId = generateSessionId();
     setTrackingCookie(cookieName, sessionId, cookieDays);
   }
 
   // --- Also persist click ID in cookie for subsequent page views ---
-  var clickIdCookie = cookieName + '_cid';
-  if (clickId) {
+  if (urlClickId) {
     setTrackingCookie(clickIdCookie, clickId, cookieDays);
-  } else {
-    // Try to read click ID from cookie (subsequent pages after landing)
-    var cidCookies = getCookieValues(clickIdCookie);
-    if (cidCookies && cidCookies.length > 0) {
-      clickId = cidCookies[0];
-    }
   }
 
   // --- Persistent User ID (cross-session tracking) ---
@@ -270,6 +289,29 @@ function executeTag() {
 }
 
 // --- Helper Functions ---
+
+function safeTestSession(token) {
+  // Deliberately not a signed-token format: must be rejected by the server.
+  var invalid = 'invalid_test_session';
+  if (typeof token !== 'string' || token.length > 2048) return invalid;
+  var allowed = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.';
+  for (var i = 0; i < token.length; i++) {
+    if (allowed.indexOf(token.charAt(i)) < 0) return invalid;
+  }
+  return token;
+}
+
+function sendMinimalEvent(trackingId, eventType, endpoint, testSession) {
+  var params = 'tid=' + encodeUriComponent(trackingId) +
+    '&eid=' + encodeUriComponent(generateEventId()) +
+    '&et=' + encodeUriComponent(eventType) +
+    '&ts=' + getTimestampMillis() + '&cid=';
+  if (testSession) params += '&test_session=' + encodeUriComponent(testSession);
+  // Preserve the template's existing optional commerce parameter behavior.
+  if (data.eventValue) params += '&val=' + encodeUriComponent(data.eventValue);
+  if (data.eventCurrency) params += '&cur=' + encodeUriComponent(data.eventCurrency);
+  sendPixel(endpoint + '?' + params, data.gtmOnSuccess, data.gtmOnFailure);
+}
 
 // mgfclid formatı: mgf.1.{communityId}.{adsId}.{matchId}.{timestamp}.{random}
 function parseMgfclid(str) {
@@ -550,6 +592,58 @@ ___WEB_PERMISSIONS___
 ___TESTS___
 
 scenarios:
+- name: Test marker sends actual purchase without cookies or visitor metadata
+  code: |-
+    let pixelUrl = '';
+    let privateAccess = false;
+    mock('isConsentGranted', function() { return true; });
+    mock('getCookieValues', function() { privateAccess = true; return []; });
+    mock('setCookie', function() { privateAccess = true; });
+    mock('getQueryParameters', function() { privateAccess = true; return ''; });
+    mock('getUrl', function() { privateAccess = true; return ''; });
+    mock('getReferrerUrl', function() { privateAccess = true; return ''; });
+    mock('sendPixel', function(url, success) { pixelUrl = url; success(); });
+    runCode({ trackingId: 'TRK-123', eventType: 'purchase', testSession: 'expired.signature',
+      eventValue: '10', eventCurrency: 'TRY', gtmOnSuccess: function() {}, gtmOnFailure: function() {} });
+    assertThat(pixelUrl).contains('et=purchase');
+    assertThat(pixelUrl).contains('&cid=&test_session=expired.signature');
+    assertThat(pixelUrl).contains('&val=10&cur=TRY');
+    assertThat(pixelUrl.indexOf('&uid=')).isEqualTo(-1);
+    assertThat(pixelUrl.indexOf('&url=')).isEqualTo(-1);
+    assertThat(privateAccess).isFalse();
+
+- name: Unsafe marker stays marked with rejecting sentinel
+  code: |-
+    mock('isConsentGranted', function() { return true; });
+    mock('sendPixel', function(url, success) {
+      assertThat(url).contains('&test_session=invalid_test_session');
+      success();
+    });
+    runCode({ trackingId: 'TRK-123', eventType: 'lead', testSession: 'bad token',
+      gtmOnSuccess: function() {}, gtmOnFailure: function() {} });
+
+- name: Unmatched request reads only click cookie and creates no cookies
+  code: |-
+    let cookieWritten = false;
+    mock('isConsentGranted', function() { return true; });
+    mock('getQueryParameters', function() { return ''; });
+    mock('getCookieValues', function(name) {
+      assertThat(name).isEqualTo('mgfcid_cid');
+      return [];
+    });
+    mock('setCookie', function() { cookieWritten = true; });
+    mock('sendPixel', function(url, success) {
+      assertThat(url).contains('&cid=');
+      assertThat(url.indexOf('&uid=')).isEqualTo(-1);
+      assertThat(url.indexOf('&sid=')).isEqualTo(-1);
+      assertThat(url.indexOf('&url=')).isEqualTo(-1);
+      assertThat(url.indexOf('&ref=')).isEqualTo(-1);
+      success();
+    });
+    runCode({ trackingId: 'TRK-123', eventType: 'page_view',
+      gtmOnSuccess: function() {}, gtmOnFailure: function() {} });
+    assertThat(cookieWritten).isFalse();
+
 - name: Fires pixel with correct parameters
   code: |-
     const mockData = {
@@ -702,6 +796,7 @@ scenarios:
     };
 
     mock('isConsentGranted', function() { return true; });
+    mock('setCookie', function() {});
     mock('getCookieValues', function(name) {
       if (name === 'mgfcid') return ['s_existing_session'];
       if (name === 'mgfcid_uid') return ['u_existing_user_123'];
