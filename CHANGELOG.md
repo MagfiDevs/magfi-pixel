@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   earlier ad-click landing. Organic visits with no click ID are no longer tracked:
   no pixel is sent, so no event reaches the backend. Previously the tag fired on
   every visit (organic included).
+- The template display name, field labels, description and icon now follow the
+  Google Tag Manager template style guide. Display-only change; no behaviour
+  change.
 
 ## [1.0.0] - 2026-05-12
 

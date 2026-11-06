@@ -21,7 +21,7 @@ Google Tag Manager (GTM) template for tracking ad clicks and conversions on your
 ## Setup
 
 1. Import `template.tpl` into GTM Template Editor
-2. Create a new tag using the Magfi Pixel template
+2. Create a new tag using the Magfi Conversion Tracking Tag template
 3. Enter your Tracking ID
 4. Select the event type and configure triggers
 

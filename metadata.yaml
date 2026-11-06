@@ -1,6 +1,8 @@
 homepage: "https://magfiads.com"
 documentation: "https://github.com/MagfiDevs/magfi-pixel#readme"
 versions:
+  - sha: 3ad99a69bae2a5206ef7e994697ce3a68ffaaa72
+    changeNotes: "Display name, field labels, description and icon now follow the Google Tag Manager template style guide. No behaviour change."
   - sha: d7baab9373475b775ae203b265e7ae17385231a8
     changeNotes: "Only fire the pixel when a Magfi click ID is present in the URL or cookie. Organic visits are no longer tracked."
   - sha: cd5d514b28c262b90e87ec2c567a533d828feb6e
