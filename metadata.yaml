@@ -1,7 +1,9 @@
 homepage: "https://magfiads.com"
 documentation: "https://github.com/MagfiDevs/magfi-pixel#readme"
 versions:
-  - sha: 1e01ed63f4a7d0b854c933cc339b3b502db58a88
-    changeNotes: "Initial release. Tracks Page View, Purchase, Lead, Sign Up, Add to Cart, and Custom events with Consent Mode v2 support."
+  - sha: d7baab9373475b775ae203b265e7ae17385231a8
+    changeNotes: "Only fire the pixel when a Magfi click ID is present in the URL or cookie. Organic visits are no longer tracked."
   - sha: cd5d514b28c262b90e87ec2c567a533d828feb6e
     changeNotes: "Tighten get_cookies permission to four specific cookie names (mgfcid, mgfcid_cid, mgfcid_uid, mgfcid_fcid). Translate template field help text to English. Add CHANGELOG, CONTRIBUTING and SECURITY  documents. No behavioural changes for end users."
+  - sha: 1e01ed63f4a7d0b854c933cc339b3b502db58a88
+    changeNotes: "Initial release. Tracks Page View, Purchase, Lead, Sign Up, Add to Cart, and Custom events with Consent Mode v2 support."
